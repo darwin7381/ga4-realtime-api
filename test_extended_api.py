@@ -46,6 +46,12 @@ def test_endpoint(base_url: str, endpoint: str, api_key: str, params: dict = Non
                 print(f"   設備類型: {len(data.get('devices', []))}")
             elif 'locations' in data:
                 print(f"   地理位置: {len(data.get('locations', []))}")
+            elif 'searchTerms' in data:
+                print(f"   搜索詞數: {len(data.get('searchTerms', []))}")
+            elif 'performance' in data:
+                perf = data['performance']
+                if 'summary' in perf:
+                    print(f"   效能等級: {perf['summary'].get('performanceGrade', 'N/A')}")
             
             print(f"   ✅ 成功")
             return True
@@ -90,8 +96,16 @@ def main():
             "tests": [
                 ("/analytics/traffic-sources", {"start_date": "7daysAgo", "end_date": "today"}),
                 ("/analytics/pageviews", {"start_date": "7daysAgo", "end_date": "today"}),
+                ("/analytics/top-pages", {"start_date": "1daysAgo", "end_date": "today", "limit": 5}),
                 ("/analytics/devices", {"start_date": "7daysAgo", "end_date": "today"}),
                 ("/analytics/geographic", {"start_date": "7daysAgo", "end_date": "today"}),
+            ]
+        },
+        {
+            "name": "新增功能測試",
+            "tests": [
+                ("/analytics/search-terms", {"start_date": "7daysAgo", "end_date": "today", "limit": 10}),
+                ("/analytics/performance", {"start_date": "7daysAgo", "end_date": "today", "limit": 5}),
             ]
         }
     ]
@@ -125,8 +139,11 @@ def main():
         print("   GET /realtime/top-pages              # 實時熱門頁面")
         print("   GET /analytics/traffic-sources       # 流量來源分析")
         print("   GET /analytics/pageviews             # 頁面瀏覽分析")
+        print("   GET /analytics/top-pages             # 熱門頁面詳細分析")
         print("   GET /analytics/devices               # 設備分析")
         print("   GET /analytics/geographic            # 地理位置數據")
+        print("   GET /analytics/search-terms          # 站內搜索分析")
+        print("   GET /analytics/performance           # 頁面效能分析")
         sys.exit(0)
     else:
         print("\n⚠️  部分測試失敗，請檢查服務狀態")

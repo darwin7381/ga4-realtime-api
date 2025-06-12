@@ -71,6 +71,24 @@ curl -X GET "https://your-app.railway.app/analytics/geographic?start_date=7daysA
   -H "X-API-Key: abc123def456"
 ```
 
+#### 熱門頁面詳細分析 (包含完整URL)
+```bash
+curl -X GET "https://your-app.railway.app/analytics/top-pages?start_date=1daysAgo&end_date=today&limit=10" \
+  -H "X-API-Key: abc123def456"
+```
+
+#### 站內搜索分析
+```bash
+curl -X GET "https://your-app.railway.app/analytics/search-terms?start_date=7daysAgo&end_date=today&limit=20" \
+  -H "X-API-Key: abc123def456"
+```
+
+#### 頁面效能分析
+```bash
+curl -X GET "https://your-app.railway.app/analytics/performance?start_date=7daysAgo&end_date=today&limit=20" \
+  -H "X-API-Key: abc123def456"
+```
+
 ### 回應格式範例
 
 #### 即時在線人數

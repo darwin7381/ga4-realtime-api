@@ -102,6 +102,21 @@ class TopPagesAnalyticsResponse(BaseModel):
     timestamp: str
     status: str = "success"
 
+class SearchTermsResponse(BaseModel):
+    user: str
+    searchTerms: List[Dict]
+    dateRange: str
+    totalTerms: int
+    timestamp: str
+    status: str = "success"
+
+class PerformanceMetricsResponse(BaseModel):
+    user: str
+    performance: Dict
+    dateRange: str
+    timestamp: str
+    status: str = "success"
+
 # 配置和常量
 GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID")
 SERVICE_ACCOUNT_JSON = os.getenv("SERVICE_ACCOUNT_JSON")
@@ -515,6 +530,83 @@ async def get_top_pages_analytics(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"熱門頁面分析失敗: {str(e)}"
+        )
+
+@app.get("/analytics/search-terms", response_model=SearchTermsResponse)
+async def get_search_terms(
+    start_date: str = "7daysAgo", 
+    end_date: str = "today",
+    limit: int = 20,
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得站內搜索數據"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求站內搜索數據")
+        search_terms = ga4_service.get_search_terms(
+            start_date=start_date, 
+            end_date=end_date, 
+            limit=limit
+        )
+        logger.info(f"站內搜索分析成功 - 用戶: {user_name}, 搜索詞數: {len(search_terms)}")
+        
+        return SearchTermsResponse(
+            user=user_name,
+            searchTerms=search_terms,
+            dateRange=f"{start_date} to {end_date}",
+            totalTerms=len(search_terms),
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"站內搜索分析失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"站內搜索分析失敗: {str(e)}"
+        )
+
+@app.get("/analytics/performance", response_model=PerformanceMetricsResponse)
+async def get_performance_metrics(
+    start_date: str = "7daysAgo", 
+    end_date: str = "today",
+    limit: int = 20,
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得頁面效能數據 (Core Web Vitals)"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求頁面效能數據")
+        performance = ga4_service.get_performance_metrics(
+            start_date=start_date, 
+            end_date=end_date, 
+            limit=limit
+        )
+        logger.info(f"頁面效能分析成功 - 用戶: {user_name}, 頁面數: {performance['summary']['totalPagesAnalyzed']}")
+        
+        return PerformanceMetricsResponse(
+            user=user_name,
+            performance=performance,
+            dateRange=f"{start_date} to {end_date}",
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"頁面效能分析失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"頁面效能分析失敗: {str(e)}"
         )
 
 # 錯誤處理

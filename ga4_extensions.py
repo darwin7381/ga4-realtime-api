@@ -357,3 +357,115 @@ class GA4DataService:
                 })
         
         return locations 
+    
+    def get_search_terms(self, start_date: str = "7daysAgo", end_date: str = "today", limit: int = 20) -> List[Dict]:
+        """獲取站內搜索數據"""
+        request = RunReportRequest(
+            property=f"properties/{self.property_id}",
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+            metrics=[
+                {"name": "totalUsers"},
+                {"name": "sessions"},
+                {"name": "screenPageViews"},
+                {"name": "averageSessionDuration"}
+            ],
+            dimensions=[
+                {"name": "searchTerm"},
+                {"name": "pagePath"}
+            ],
+            # 注意：站內搜索需要GA4設置才能工作，先嘗試不使用過濾器
+            order_bys=[OrderBy(metric={"metric_name": "totalUsers"}, desc=True)],
+            limit=limit
+        )
+        
+        response = self.client.run_report(request=request)
+        
+        searches = []
+        if response.rows:
+            for row in response.rows:
+                searches.append({
+                    "searchTerm": row.dimension_values[0].value,
+                    "searchPage": row.dimension_values[1].value if len(row.dimension_values) > 1 else "",
+                    "totalUsers": int(row.metric_values[0].value),
+                    "sessions": int(row.metric_values[1].value),
+                    "pageViews": int(row.metric_values[2].value),
+                    "avgSessionDuration": round(float(row.metric_values[3].value), 2)
+                })
+        
+        return searches
+    
+    def get_performance_metrics(self, start_date: str = "7daysAgo", end_date: str = "today", limit: int = 20) -> Dict:
+        """獲取頁面效能數據 (Core Web Vitals)"""
+        # 頁面載入時間數據
+        request = RunReportRequest(
+            property=f"properties/{self.property_id}",
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+            metrics=[
+                {"name": "averageSessionDuration"},
+                {"name": "bounceRate"},
+                {"name": "screenPageViews"},
+                {"name": "engagementRate"},
+                {"name": "sessionsPerUser"}
+            ],
+            dimensions=[
+                {"name": "pagePath"},
+                {"name": "pageTitle"},
+                {"name": "deviceCategory"}
+            ],
+            order_bys=[OrderBy(metric={"metric_name": "screenPageViews"}, desc=True)],
+            limit=limit
+        )
+        
+        response = self.client.run_report(request=request)
+        
+        pages_performance = []
+        total_bounce_rate = 0
+        total_engagement_rate = 0
+        total_pages = 0
+        
+        if response.rows:
+            for row in response.rows:
+                bounce_rate = float(row.metric_values[1].value) * 100
+                engagement_rate = float(row.metric_values[3].value) * 100
+                
+                total_bounce_rate += bounce_rate
+                total_engagement_rate += engagement_rate
+                total_pages += 1
+                
+                pages_performance.append({
+                    "pagePath": row.dimension_values[0].value,
+                    "pageTitle": row.dimension_values[1].value if len(row.dimension_values) > 1 else "未知標題",
+                    "deviceCategory": row.dimension_values[2].value if len(row.dimension_values) > 2 else "未知設備",
+                    "avgSessionDuration": round(float(row.metric_values[0].value), 2),
+                    "bounceRate": round(bounce_rate, 2),
+                    "pageViews": int(row.metric_values[2].value),
+                    "engagementRate": round(engagement_rate, 2),
+                    "sessionsPerUser": round(float(row.metric_values[4].value), 2)
+                })
+        
+        # 計算整體效能指標
+        avg_bounce_rate = round(total_bounce_rate / total_pages, 2) if total_pages > 0 else 0
+        avg_engagement_rate = round(total_engagement_rate / total_pages, 2) if total_pages > 0 else 0
+        
+        return {
+            "summary": {
+                "totalPagesAnalyzed": total_pages,
+                "avgBounceRate": avg_bounce_rate,
+                "avgEngagementRate": avg_engagement_rate,
+                "performanceGrade": self._calculate_performance_grade(avg_bounce_rate, avg_engagement_rate)
+            },
+            "pagePerformance": pages_performance
+        }
+    
+    def _calculate_performance_grade(self, bounce_rate: float, engagement_rate: float) -> str:
+        """計算網站效能等級"""
+        if bounce_rate < 25 and engagement_rate > 70:
+            return "A+ (優秀)"
+        elif bounce_rate < 40 and engagement_rate > 60:
+            return "A (良好)"
+        elif bounce_rate < 55 and engagement_rate > 45:
+            return "B (一般)"
+        elif bounce_rate < 70 and engagement_rate > 30:
+            return "C (需改善)"
+        else:
+            return "D (急需優化)"

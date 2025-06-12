@@ -8,20 +8,25 @@ BlockTempo GA4 即時在線人數查詢服務
 
 2. **連接到 Railway**
    - 登入 [Railway](https://railway.app)
-   - 選擇 "Deploy from GitHub repo"
-   - 選擇此專案
+   - 點擊 "New Project" → "Deploy from GitHub repo"
+   - 選擇此專案倉庫
+   - Railway 會自動檢測並部署
+   - 
 
 3. **設定環境變數**
+   在 Railway Dashboard 中添加以下環境變數：
    ```bash
    GA4_PROPERTY_ID=你的GA4屬性ID
-   SERVICE_ACCOUNT_JSON=你的Service Account JSON內容
-   API_KEY_JOEY=joey的API密鑰
-   API_KEY_TINA=tina的API密鑰
+   GOOGLE_SERVICE_ACCOUNT_JSON=你的Service Account JSON內容(單行格式)
+   API_KEYS=你的API密鑰(逗號分隔)
+   RATE_LIMIT_REQUESTS=200
+   RATE_LIMIT_WINDOW_MINUTES=10
    ```
 
-4. **部署完成**
-   - Railway會自動偵測Python專案並部署
-   - 部署後會獲得一個公用URL
+4. **自動部署**
+   - 每次 push 到 main 分支會自動觸發部署
+   - Railway 會自動檢測 `railway.json` 配置
+   - 部署完成後獲得公用 URL
 
 ## 📡 API 使用方法
 

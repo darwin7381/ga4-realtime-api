@@ -25,15 +25,55 @@ BlockTempo GA4 即時在線人數查詢服務
 
 ## 📡 API 使用方法
 
-### 取得即時在線人數
+### 🔥 實時數據查詢
 
+#### 即時在線人數
 ```bash
 curl -X GET "https://your-app.railway.app/active-users" \
   -H "X-API-Key: abc123def456"
 ```
 
-### 回應格式
+#### 實時總覽數據
+```bash
+curl -X GET "https://your-app.railway.app/realtime/overview" \
+  -H "X-API-Key: abc123def456"
+```
 
+#### 實時熱門頁面
+```bash
+curl -X GET "https://your-app.railway.app/realtime/top-pages?limit=10" \
+  -H "X-API-Key: abc123def456"
+```
+
+### 📊 分析數據查詢
+
+#### 流量來源分析
+```bash
+curl -X GET "https://your-app.railway.app/analytics/traffic-sources?start_date=7daysAgo&end_date=today" \
+  -H "X-API-Key: abc123def456"
+```
+
+#### 頁面瀏覽分析
+```bash
+curl -X GET "https://your-app.railway.app/analytics/pageviews?start_date=7daysAgo&end_date=today" \
+  -H "X-API-Key: abc123def456"
+```
+
+#### 設備分析
+```bash
+curl -X GET "https://your-app.railway.app/analytics/devices?start_date=7daysAgo&end_date=today" \
+  -H "X-API-Key: abc123def456"
+```
+
+#### 地理位置數據
+```bash
+curl -X GET "https://your-app.railway.app/analytics/geographic?start_date=7daysAgo&end_date=today" \
+  -H "X-API-Key: abc123def456"
+```
+
+### 回應格式範例
+
+#### 即時在線人數
 ```json
 {
   "user": "joey",
@@ -43,10 +83,42 @@ curl -X GET "https://your-app.railway.app/active-users" \
 }
 ```
 
-### 健康檢查
+#### 實時總覽
+```json
+{
+  "user": "joey",
+  "data": {
+    "activeUsers": 1665,
+    "pageViews": 2341,
+    "events": 5672,
+    "topCountries": [
+      {"name": "Taiwan", "users": 892},
+      {"name": "United States", "users": 445}
+    ],
+    "deviceBreakdown": [
+      {"name": "desktop", "users": 1203},
+      {"name": "mobile", "users": 462}
+    ]
+  },
+  "timestamp": "2023-12-07T10:30:00.123456",
+  "status": "success"
+}
+```
 
+### 🔍 系統監控
+
+#### 健康檢查
 ```bash
 curl https://your-app.railway.app/health
+```
+
+#### API文檔
+```bash
+# Swagger UI
+https://your-app.railway.app/docs
+
+# ReDoc
+https://your-app.railway.app/redoc
 ```
 
 ## 🔧 本地開發
@@ -76,9 +148,29 @@ API文檔: http://localhost:8000/docs
 
 ## ⚡ 功能特色
 
+### 🔐 安全與認證
 - ✅ API Key 多用戶驗證
 - ✅ 速率限制保護 (每10分鐘200次)
+- ✅ Service Account 安全整合
+
+### 📊 數據查詢功能
+- ✅ **實時數據**: 在線用戶、熱門頁面、流量總覽
+- ✅ **歷史分析**: 頁面瀏覽、流量來源、用戶行為
+- ✅ **設備分析**: 設備類型、作業系統、瀏覽器統計
+- ✅ **地理數據**: 國家/城市分布、地理流量分析
+- ✅ **自定義日期範圍**: 支援靈活的查詢期間
+
+### 🛠 技術特色
+- ✅ 現代化 uv 套件管理
+- ✅ FastAPI + Swagger 自動文檔
 - ✅ 結構化日誌記錄
 - ✅ 健康檢查端點
-- ✅ Swagger API 文檔
-- ✅ 錯誤處理機制 
+- ✅ 完整的錯誤處理機制
+- ✅ Railway 部署就緒
+
+### 🎯 使用場景
+- ✅ n8n 自動化整合
+- ✅ 即時儀表板顯示
+- ✅ Telegram/Notion 通知
+- ✅ 數據分析報表
+- ✅ 流量監控警報 

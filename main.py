@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from datetime import datetime, timedelta
 import logging
 
@@ -12,6 +12,9 @@ from google.analytics.data_v1beta.types import RunRealtimeReportRequest
 from google.oauth2 import service_account
 from pydantic import BaseModel
 import time
+
+# 導入GA4擴展功能
+from ga4_extensions import GA4DataService
 
 # 載入環境變數 (本地開發用)
 load_dotenv()
@@ -50,6 +53,46 @@ class ErrorResponse(BaseModel):
     error: str
     message: str
     timestamp: str
+
+class RealtimeOverviewResponse(BaseModel):
+    user: str
+    data: Dict
+    timestamp: str
+    status: str = "success"
+
+class TopPagesResponse(BaseModel):
+    user: str
+    pages: List[Dict]
+    timestamp: str
+    status: str = "success"
+
+class TrafficSourcesResponse(BaseModel):
+    user: str
+    sources: List[Dict]
+    dateRange: str
+    timestamp: str
+    status: str = "success"
+
+class PageAnalyticsResponse(BaseModel):
+    user: str
+    analytics: Dict
+    dateRange: str
+    timestamp: str
+    status: str = "success"
+
+class DeviceAnalyticsResponse(BaseModel):
+    user: str
+    devices: List[Dict]
+    dateRange: str
+    timestamp: str
+    status: str = "success"
+
+class GeographicDataResponse(BaseModel):
+    user: str
+    locations: List[Dict]
+    dateRange: str
+    timestamp: str
+    status: str = "success"
 
 # 配置和常量
 GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID")
@@ -100,6 +143,14 @@ class RateLimiter:
         return True
 
 rate_limiter = RateLimiter(max_requests=200, time_window=600)
+
+# 初始化GA4數據服務
+try:
+    ga4_service = GA4DataService()
+    logger.info("GA4DataService 初始化成功")
+except Exception as e:
+    logger.warning(f"GA4DataService 初始化失敗: {str(e)}")
+    ga4_service = None
 
 # GA4 客戶端初始化
 def get_ga4_client():
@@ -229,6 +280,194 @@ async def get_active_users(x_api_key: Optional[str] = Header(None)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"GA4查詢失敗: {str(e)}"
+        )
+
+@app.get("/realtime/overview", response_model=RealtimeOverviewResponse)
+async def get_realtime_overview(x_api_key: Optional[str] = Header(None)):
+    """取得實時總覽數據"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求實時總覽數據")
+        data = ga4_service.get_realtime_overview()
+        logger.info(f"實時總覽查詢成功 - 用戶: {user_name}")
+        
+        return RealtimeOverviewResponse(
+            user=user_name,
+            data=data,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"實時總覽查詢失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"實時總覽查詢失敗: {str(e)}"
+        )
+
+@app.get("/realtime/top-pages", response_model=TopPagesResponse)
+async def get_realtime_top_pages(limit: int = 10, x_api_key: Optional[str] = Header(None)):
+    """取得實時熱門頁面"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求實時熱門頁面")
+        pages = ga4_service.get_realtime_top_pages(limit=limit)
+        logger.info(f"實時熱門頁面查詢成功 - 用戶: {user_name}, 頁面數: {len(pages)}")
+        
+        return TopPagesResponse(
+            user=user_name,
+            pages=pages,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"實時熱門頁面查詢失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"實時熱門頁面查詢失敗: {str(e)}"
+        )
+
+@app.get("/analytics/traffic-sources", response_model=TrafficSourcesResponse)
+async def get_traffic_sources(
+    start_date: str = "7daysAgo", 
+    end_date: str = "today",
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得流量來源分析"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求流量來源分析")
+        sources = ga4_service.get_traffic_sources(start_date=start_date, end_date=end_date)
+        logger.info(f"流量來源分析成功 - 用戶: {user_name}, 來源數: {len(sources)}")
+        
+        return TrafficSourcesResponse(
+            user=user_name,
+            sources=sources,
+            dateRange=f"{start_date} to {end_date}",
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"流量來源分析失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"流量來源分析失敗: {str(e)}"
+        )
+
+@app.get("/analytics/pageviews", response_model=PageAnalyticsResponse)
+async def get_pageviews_analytics(
+    start_date: str = "7daysAgo", 
+    end_date: str = "today",
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得頁面瀏覽分析"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求頁面瀏覽分析")
+        analytics = ga4_service.get_pageviews_analytics(start_date=start_date, end_date=end_date)
+        logger.info(f"頁面瀏覽分析成功 - 用戶: {user_name}")
+        
+        return PageAnalyticsResponse(
+            user=user_name,
+            analytics=analytics,
+            dateRange=f"{start_date} to {end_date}",
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"頁面瀏覽分析失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"頁面瀏覽分析失敗: {str(e)}"
+        )
+
+@app.get("/analytics/devices", response_model=DeviceAnalyticsResponse)
+async def get_device_analytics(
+    start_date: str = "7daysAgo", 
+    end_date: str = "today",
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得設備分析數據"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求設備分析數據")
+        devices = ga4_service.get_device_analytics(start_date=start_date, end_date=end_date)
+        logger.info(f"設備分析成功 - 用戶: {user_name}, 設備數: {len(devices)}")
+        
+        return DeviceAnalyticsResponse(
+            user=user_name,
+            devices=devices,
+            dateRange=f"{start_date} to {end_date}",
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"設備分析失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"設備分析失敗: {str(e)}"
+        )
+
+@app.get("/analytics/geographic", response_model=GeographicDataResponse)
+async def get_geographic_data(
+    start_date: str = "7daysAgo", 
+    end_date: str = "today",
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得地理位置數據"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求地理位置數據")
+        locations = ga4_service.get_geographic_data(start_date=start_date, end_date=end_date)
+        logger.info(f"地理位置數據查詢成功 - 用戶: {user_name}, 位置數: {len(locations)}")
+        
+        return GeographicDataResponse(
+            user=user_name,
+            locations=locations,
+            dateRange=f"{start_date} to {end_date}",
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"地理位置數據查詢失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"地理位置數據查詢失敗: {str(e)}"
         )
 
 # 錯誤處理

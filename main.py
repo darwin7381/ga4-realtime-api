@@ -94,6 +94,14 @@ class GeographicDataResponse(BaseModel):
     timestamp: str
     status: str = "success"
 
+class TopPagesAnalyticsResponse(BaseModel):
+    user: str
+    pages: List[Dict]
+    dateRange: str
+    totalPages: int
+    timestamp: str
+    status: str = "success"
+
 # 配置和常量
 GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID")
 SERVICE_ACCOUNT_JSON = os.getenv("SERVICE_ACCOUNT_JSON")
@@ -468,6 +476,45 @@ async def get_geographic_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"地理位置數據查詢失敗: {str(e)}"
+        )
+
+@app.get("/analytics/top-pages", response_model=TopPagesAnalyticsResponse)
+async def get_top_pages_analytics(
+    start_date: str = "1daysAgo", 
+    end_date: str = "today",
+    limit: int = 20,
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得熱門頁面分析數據 (包含完整URL路徑和詳細指標)"""
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求熱門頁面分析數據")
+        pages = ga4_service.get_top_pages_analytics(
+            start_date=start_date, 
+            end_date=end_date, 
+            limit=limit
+        )
+        logger.info(f"熱門頁面分析成功 - 用戶: {user_name}, 頁面數: {len(pages)}")
+        
+        return TopPagesAnalyticsResponse(
+            user=user_name,
+            pages=pages,
+            dateRange=f"{start_date} to {end_date}",
+            totalPages=len(pages),
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"熱門頁面分析失敗 - 用戶: {user_name}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"熱門頁面分析失敗: {str(e)}"
         )
 
 # 錯誤處理

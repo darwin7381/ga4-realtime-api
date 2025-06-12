@@ -99,7 +99,39 @@ class GA4DataService:
         }
     
     def get_realtime_top_pages(self, limit: int = 10) -> List[Dict]:
-        """獲取實時熱門頁面"""
+        """獲取實時熱門頁面 (注意：GA4實時API對URL路徑支援有限)"""
+        # 嘗試獲取帶有路徑的實時數據
+        try:
+            request = RunRealtimeReportRequest(
+                property=f"properties/{self.property_id}",
+                metrics=[
+                    {"name": "activeUsers"},
+                    {"name": "screenPageViews"}
+                ],
+                dimensions=[
+                    {"name": "pagePath"},
+                    {"name": "pageTitle"}
+                ],
+                order_bys=[OrderBy(metric={"metric_name": "activeUsers"}, desc=True)],
+                limit=limit
+            )
+            
+            response = self.client.run_realtime_report(request=request)
+            
+            pages = []
+            if response.rows:
+                for row in response.rows:
+                    pages.append({
+                        "pagePath": row.dimension_values[0].value,
+                        "pageTitle": row.dimension_values[1].value if len(row.dimension_values) > 1 else "未知標題",
+                        "activeUsers": int(row.metric_values[0].value),
+                        "pageViews": int(row.metric_values[1].value)
+                    })
+                return pages
+        except Exception as e:
+            logger.warning(f"無法取得實時頁面路徑數據，回退至螢幕名稱: {e}")
+        
+        # 回退方案：使用screenName
         request = RunRealtimeReportRequest(
             property=f"properties/{self.property_id}",
             metrics=[
@@ -120,8 +152,48 @@ class GA4DataService:
             for row in response.rows:
                 pages.append({
                     "screenName": row.dimension_values[0].value,
+                    "note": "實時API限制：無法提供完整URL路徑",
                     "activeUsers": int(row.metric_values[0].value),
                     "pageViews": int(row.metric_values[1].value)
+                })
+        
+        return pages
+    
+    def get_top_pages_analytics(self, start_date: str = "1daysAgo", end_date: str = "today", limit: int = 20) -> List[Dict]:
+        """獲取熱門頁面分析數據 (包含完整URL路徑)"""
+        request = RunReportRequest(
+            property=f"properties/{self.property_id}",
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+            metrics=[
+                {"name": "screenPageViews"},
+                {"name": "totalUsers"},
+                {"name": "sessions"},
+                {"name": "averageSessionDuration"},
+                {"name": "bounceRate"}
+            ],
+            dimensions=[
+                {"name": "pagePath"},
+                {"name": "pageTitle"},
+                {"name": "fullPageUrl"}
+            ],
+            order_bys=[OrderBy(metric={"metric_name": "screenPageViews"}, desc=True)],
+            limit=limit
+        )
+        
+        response = self.client.run_report(request=request)
+        
+        pages = []
+        if response.rows:
+            for row in response.rows:
+                pages.append({
+                    "pagePath": row.dimension_values[0].value,
+                    "pageTitle": row.dimension_values[1].value if len(row.dimension_values) > 1 else "未知標題",
+                    "fullUrl": row.dimension_values[2].value if len(row.dimension_values) > 2 else "",
+                    "pageViews": int(row.metric_values[0].value),
+                    "totalUsers": int(row.metric_values[1].value),
+                    "sessions": int(row.metric_values[2].value),
+                    "avgSessionDuration": round(float(row.metric_values[3].value), 2),
+                    "bounceRate": round(float(row.metric_values[4].value) * 100, 2)
                 })
         
         return pages

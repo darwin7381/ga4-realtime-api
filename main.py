@@ -117,6 +117,13 @@ class PerformanceMetricsResponse(BaseModel):
     timestamp: str
     status: str = "success"
 
+class SinglePageAnalyticsResponse(BaseModel):
+    user: str
+    pageData: Dict
+    dateRange: str
+    timestamp: str
+    status: str = "success"
+
 # 配置和常量
 GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID")
 SERVICE_ACCOUNT_JSON = os.getenv("SERVICE_ACCOUNT_JSON")
@@ -607,6 +614,68 @@ async def get_performance_metrics(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"頁面效能分析失敗: {str(e)}"
+        )
+
+@app.get("/analytics/single-page", response_model=SinglePageAnalyticsResponse)
+async def get_single_page_analytics(
+    page_path: str,
+    start_date: str = "7daysAgo", 
+    end_date: str = "today",
+    x_api_key: Optional[str] = Header(None)
+):
+    """取得單篇頁面的詳細分析數據
+    
+    參數:
+    - page_path: 頁面路徑或完整URL (例如: "/article-title/" 或 "https://example.com/article-title/")
+    - start_date: 開始日期 (預設: 7daysAgo)
+    - end_date: 結束日期 (預設: today)
+    
+    返回該頁面的詳細數據包括:
+    - 總體摘要 (頁面瀏覽數、用戶數、會話數等)
+    - 每日詳細數據
+    - 流量來源分析
+    - 設備分布
+    """
+    user_name = verify_api_key(x_api_key)
+    
+    if not ga4_service:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GA4DataService 未初始化"
+        )
+    
+    try:
+        logger.info(f"用戶 {user_name} 請求單篇頁面分析: {page_path}")
+        page_data = ga4_service.get_single_page_analytics(
+            page_path=page_path,
+            start_date=start_date, 
+            end_date=end_date
+        )
+        
+        # 檢查是否有錯誤
+        if "error" in page_data:
+            logger.warning(f"單篇頁面分析未找到數據 - 用戶: {user_name}, 頁面: {page_path}")
+            return SinglePageAnalyticsResponse(
+                user=user_name,
+                pageData=page_data,
+                dateRange=f"{start_date} to {end_date}",
+                timestamp=datetime.now().isoformat(),
+                status="not_found"
+            )
+        
+        logger.info(f"單篇頁面分析成功 - 用戶: {user_name}, 頁面: {page_path}, 總瀏覽: {page_data['summary']['totalPageViews']}")
+        
+        return SinglePageAnalyticsResponse(
+            user=user_name,
+            pageData=page_data,
+            dateRange=f"{start_date} to {end_date}",
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"單篇頁面分析失敗 - 用戶: {user_name}, 頁面: {page_path}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"單篇頁面分析失敗: {str(e)}"
         )
 
 # 錯誤處理

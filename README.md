@@ -111,6 +111,17 @@ curl -X GET "https://your-app.railway.app/analytics/performance?start_date=7days
   -H "X-API-Key: abc123def456"
 ```
 
+#### 單篇頁面詳細分析 ⭐ 新功能
+```bash
+# 使用頁面路徑查詢
+curl -X GET "https://your-app.railway.app/analytics/single-page?page_path=/article-title/&start_date=7daysAgo&end_date=today" \
+  -H "X-API-Key: abc123def456"
+
+# 使用完整URL查詢  
+curl -X GET "https://your-app.railway.app/analytics/single-page?page_path=https://example.com/article-title/&start_date=yesterday&end_date=today" \
+  -H "X-API-Key: abc123def456"
+```
+
 ### 回應格式範例
 
 #### 即時在線人數
@@ -141,6 +152,61 @@ curl -X GET "https://your-app.railway.app/analytics/performance?start_date=7days
     ]
   },
   "timestamp": "2023-12-07T10:30:00.123456",
+  "status": "success"
+}
+```
+
+#### 單篇頁面分析
+```json
+{
+  "user": "joey",
+  "pageData": {
+    "pagePath": "/iran-bans-crypto-night/",
+    "pageTitle": "伊朗宣布「晚上禁用加密貨幣」，以色列駭客燒毀Nobitex 1億美元引爆鏈上恐慌火",
+    "dateRange": "7daysAgo to today",
+    "summary": {
+      "totalPageViews": 4832,
+      "totalUsers": 3654,
+      "totalSessions": 4121,
+      "newUsers": 2891,
+      "avgBounceRate": 8.23,
+      "avgEngagementRate": 91.77,
+      "avgSessionDuration": 156.45,
+      "performanceGrade": "A+ (優秀)"
+    },
+    "dailyBreakdown": [
+      {
+        "date": "20250613",
+        "pageViews": 687,
+        "users": 523,
+        "sessions": 612,
+        "avgSessionDuration": 142.31,
+        "bounceRate": 7.84,
+        "engagementRate": 92.16,
+        "newUsers": 445
+      }
+    ],
+    "trafficSources": [
+      {
+        "channelGroup": "Organic Search",
+        "source": "google",
+        "medium": "organic", 
+        "sessions": 2341,
+        "users": 1876,
+        "pageViews": 2587
+      }
+    ],
+    "deviceBreakdown": [
+      {
+        "deviceCategory": "mobile",
+        "operatingSystem": "Android",
+        "users": 2134,
+        "sessions": 2398,
+        "pageViews": 2756
+      }
+    ]
+  },
+  "timestamp": "2025-06-19T10:30:00.123456",
   "status": "success"
 }
 ```
@@ -270,6 +336,23 @@ asyncio.run(test_database_connection())
 
 # 查看所有API Keys
 env | grep API_KEY_
+
+# 測試新的單篇頁面分析功能
+python test_single_page.py http://localhost:8000 你的API金鑰 /article-path/
+```
+
+### 🆕 新功能測試
+
+**單篇頁面分析功能**：
+```bash
+# 測試正式環境
+python test_single_page.py https://ga4.blocktempo.ai 你的API金鑰 /iran-bans-crypto-night/
+
+# 測試本地開發環境
+python test_single_page.py http://localhost:8000 你的API金鑰 /article-path/
+
+# 使用完整URL測試
+python test_single_page.py https://ga4.blocktempo.ai 你的API金鑰 "https://www.blocktempo.com/some-article/"
 ```
 
 ## 🔐 Service Account 設定
@@ -291,6 +374,7 @@ env | grep API_KEY_
 ### 📊 數據查詢功能
 - ✅ **實時數據**: 在線用戶、熱門頁面、流量總覽
 - ✅ **歷史分析**: 頁面瀏覽、流量來源、用戶行為
+- ✅ **單篇頁面分析**: ⭐ 查詢特定文章的詳細數據和趨勢
 - ✅ **設備分析**: 設備類型、作業系統、瀏覽器統計
 - ✅ **地理數據**: 國家/城市分布、地理流量分析
 - ✅ **自定義日期範圍**: 支援靈活的查詢期間

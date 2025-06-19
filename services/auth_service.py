@@ -23,7 +23,7 @@ class AuthenticationResult:
         self.access_token = access_token
 
 class RateLimiter:
-    def __init__(self, max_requests: int = 200, time_window: int = 600):
+    def __init__(self, max_requests: int = 100, time_window: int = 180):
         self.max_requests = max_requests
         self.time_window = time_window
         self.requests = {}

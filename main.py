@@ -172,7 +172,7 @@ class RateLimiter:
         self.requests[api_key].append(now)
         return True
 
-rate_limiter = RateLimiter(max_requests=200, time_window=600)
+rate_limiter = RateLimiter(max_requests=100, time_window=180)
 
 # 初始化GA4數據服務
 try:

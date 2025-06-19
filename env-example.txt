@@ -4,10 +4,23 @@ GA4_PROPERTY_ID=319075120
 # Service Account JSON (將整個JSON內容放在一行)
 SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"your-project","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"..."}
 
-# API Keys - 格式: API_KEY_[USERNAME]=key
+# API Keys - 格式: API_KEY_[USERNAME]=key (V1 相容模式)
 API_KEY_JOEY=abc123def456
 API_KEY_TINA=xyz789uvw012
 API_KEY_ADMIN=admin_secret_key_2023
+
+# V2 OAuth 配置
+GOOGLE_CLIENT_ID=your_client_id.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret
+OAUTH_REDIRECT_URI=https://your-app.railway.app/auth/callback
+BASE_URL=https://your-app.railway.app
+
+# 資料庫配置 (Railway 會自動提供)
+DATABASE_URL=postgresql://user:password@host:port/database
+
+# 功能開關
+ENABLE_OAUTH_MODE=true
+ENABLE_API_KEY_MODE=true
 
 # 可選配置 (Railway會自動設定PORT)
 # PORT=8000 

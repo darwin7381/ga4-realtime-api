@@ -11,7 +11,6 @@ BlockTempo GA4 即時在線人數查詢服務
    - 點擊 "New Project" → "Deploy from GitHub repo"
    - 選擇此專案倉庫
    - Railway 會自動檢測並部署
-   - 
 
 3. **設定環境變數**
    在 Railway Dashboard 中添加以下環境變數：
@@ -27,6 +26,24 @@ BlockTempo GA4 即時在線人數查詢服務
    - 每次 push 到 main 分支會自動觸發部署
    - Railway 會自動檢測 `railway.json` 配置
    - 部署完成後獲得公用 URL
+
+### 🔒 部署安全性說明
+
+**✅ V2開發不會影響現有服務**
+
+Railway 部署配置 (`railway.json`) 明確指定：
+```json
+{
+  "deploy": {
+    "startCommand": "uvicorn main:app --host 0.0.0.0 --port $PORT"
+  }
+}
+```
+
+- Railway **僅啟動 V1版本** (`main:app`)
+- 即使提交 V2 程碼到 GitHub，**現有 V1 服務完全不受影響**
+- V2 程碼可以安全地進行開發和測試
+- 要部署 V2 需要手動修改 `railway.json` 的 `startCommand`
 
 ## 📡 API 使用方法
 
@@ -144,21 +161,116 @@ https://your-app.railway.app/docs
 https://your-app.railway.app/redoc
 ```
 
-## 🔧 本地開發
+## 🔧 本地開發與測試
+
+### 📋 專案版本說明
+
+此專案包含兩個版本：
+
+- **V1版本 (Production)**: `main.py` - 端口 8000 - 目前Railway部署版本
+- **V2版本 (Development)**: `main_v2.py` - 端口 8002 - 新功能開發版本
+
+### 🛠 環境設置
 
 ```bash
-# 安裝依賴
+# 1. 安裝依賴
 pip install -r requirements.txt
 
-# 設定環境變數
+# 2. 設定環境變數
 cp env-example.txt .env
-# 編輯 .env 檔案
 
-# 啟動服務
-uvicorn main:app --reload
+# 3. 編輯 .env 文件，至少需要設置：
+# GA4_PROPERTY_ID=你的GA4屬性ID
+# SERVICE_ACCOUNT_JSON=你的服務帳戶JSON
+# API_KEY_JOEY=你的API金鑰
 ```
 
-API文檔: http://localhost:8000/docs
+### 🧪 V1版本測試 (Production Version)
+
+```bash
+# 啟動V1服務
+python main.py
+# 或使用 uvicorn
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# 使用測試腳本
+python test_api.py http://localhost:8000 你的API金鑰
+
+# 手動測試
+curl http://localhost:8000/health
+curl -X GET "http://localhost:8000/active-users" -H "X-API-Key: 你的API金鑰"
+```
+
+**V1 API文檔**: http://localhost:8000/docs
+
+### 🧪 V2版本測試 (Development Version)
+
+```bash
+# 1. 初始化V2資料庫
+python init_db.py
+
+# 2. 啟動V2服務
+python main_v2.py
+# 或使用 uvicorn
+uvicorn main_v2:app --reload --host 0.0.0.0 --port 8002
+
+# 3. 使用V2專用測試腳本
+python test_v2_api.py
+
+# 4. 手動測試V2新功能
+curl http://localhost:8002/health
+curl http://localhost:8002/dashboard  # 用戶控制面板
+curl http://localhost:8002/auth/google  # OAuth認證
+```
+
+**V2 API文檔**: http://localhost:8002/docs
+
+### 🔄 同時運行兩個版本
+
+你可以同時運行V1和V2進行功能比較：
+
+```bash
+# 終端1 - 啟動V1
+python main.py
+# 服務運行在 http://localhost:8000
+
+# 終端2 - 啟動V2  
+python main_v2.py
+# 服務運行在 http://localhost:8002
+
+# 終端3 - 執行比較測試
+python test_api.py http://localhost:8000 你的API金鑰     # 測試V1
+python test_v2_api.py                                    # 測試V2
+```
+
+### 📊 版本功能比較
+
+| 功能 | V1版本 | V2版本 |
+|------|--------|--------|
+| GA4數據查詢 | ✅ | ✅ |
+| API Key認證 | ✅ | ✅ |
+| OAuth 2.0認證 | ❌ | ✅ |
+| 用戶管理面板 | ❌ | ✅ |
+| 資料庫支持 | ❌ | ✅ |
+| API Key管理 | ❌ | ✅ |
+| 速率限制 | ✅ | ✅ |
+
+### 🐛 除錯技巧
+
+```bash
+# 檢查環境變數載入
+python debug_env.py
+
+# 檢查V2資料庫狀態
+python -c "
+from database import test_database_connection
+import asyncio
+asyncio.run(test_database_connection())
+"
+
+# 查看所有API Keys
+env | grep API_KEY_
+```
 
 ## 🔐 Service Account 設定
 

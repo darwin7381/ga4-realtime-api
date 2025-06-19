@@ -69,3 +69,13 @@ cover/
 
 # uv
 .uv/
+
+# 資料庫檔案 (可能包含敏感資訊)
+*.db
+*.sqlite
+*.sqlite3
+test_ga4_v2.db
+
+# 測試生成的檔案
+test_*.db
+*.test.db

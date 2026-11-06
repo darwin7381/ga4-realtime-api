@@ -30,7 +30,11 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="GA4 Realtime API Service",
     description="BlockTempo GA4 即時在線人數查詢服務",
-    version="1.0.0"
+    version="1.0.0",
+    # 2026-11-06: no public API map (Joey TG 6999 exposure review); data endpoints still need an API key
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # CORS 中間件
@@ -255,11 +259,7 @@ async def health_check():
     
     all_ok = all(checks.values())
     
-    return {
-        "status": "healthy" if all_ok else "degraded",
-        "checks": checks,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy" if all_ok else "degraded"}  # config details no longer published (2026-11-06)
 
 @app.get("/active-users", response_model=ActiveUsersResponse)
 async def get_active_users(x_api_key: Optional[str] = Header(None)):
